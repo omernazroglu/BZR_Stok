@@ -251,6 +251,37 @@
         </table>
     </div>
 
+    <!-- Sayfalama (Pagination) -->
+    {% if urunler.has_other_pages %}
+    <div class="d-flex justify-content-center mt-4">
+        <ul class="pagination pagination-sm" style="--bs-pagination-bg: rgba(255, 255, 255, 0.05); --bs-pagination-border-color: var(--bzr-border); --bs-pagination-color: var(--bzr-primary);">
+            {% if urunler.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if arama %}&q={{ arama }}{% endif %}">&laquo; İlk</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ urunler.previous_page_number }}{% if arama %}&q={{ arama }}{% endif %}">Önceki</a>
+                </li>
+            {% endif %}
+
+            <li class="page-item disabled">
+                <span class="page-link" style="background: rgba(99, 102, 241, 0.1); color: var(--bzr-primary);">
+                    Sayfa {{ urunler.number }} / {{ urunler.paginator.num_pages }}
+                </span>
+            </li>
+
+            {% if urunler.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ urunler.next_page_number }}{% if arama %}&q={{ arama }}{% endif %}">Sonraki</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ urunler.paginator.num_pages }}{% if arama %}&q={{ arama }}{% endif %}">Son &raquo;</a>
+                </li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+
     {% else %}
     <!-- Boş Durum -->
     <div class="text-center py-5" style="color: var(--bzr-muted);">

@@ -29,22 +29,22 @@ def dashboard(request):
     """
     from django.db.models import F, ExpressionWrapper, DecimalField, Sum
 
+    from django.core.paginator import Paginator
+
     arama = request.GET.get('q', '').strip()
-    urunler = UrunStok.objects.all()
+    urunler_listesi = UrunStok.objects.all()
 
     if arama:
-        urunler = urunler.filter(name__icontains=arama)
+        urunler_listesi = urunler_listesi.filter(name__icontains=arama)
 
-    # Kritik ürün sayısı: stock_quantity <= critical_threshold
-    # Django'da iki alan karşılaştırması için F() kullanılır
+    # Toplam istatistikler tüm veritabanı üzerinden hesaplanır
     kritik_sayisi = UrunStok.objects.filter(
         stock_quantity__lte=F('critical_threshold')
     ).count()
 
     toplam_urun = UrunStok.objects.count()
 
-    # Toplam stok değeri = Σ (stok_miktarı × alış_fiyatı)
-    # aggregate ile tek sorguda hesaplanır (verimli)
+    # Toplam stok değeri
     toplam_deger_qs = UrunStok.objects.aggregate(
         toplam=Sum(
             ExpressionWrapper(
@@ -54,6 +54,11 @@ def dashboard(request):
         )
     )
     toplam_deger = toplam_deger_qs['toplam'] or 0
+
+    # Sayfalama: Her sayfada 50 ürün göster
+    paginator = Paginator(urunler_listesi, 50) 
+    page_number = request.GET.get('page')
+    urunler = paginator.get_page(page_number)
 
     context = {
         'urunler': urunler,
