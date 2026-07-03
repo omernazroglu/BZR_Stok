@@ -1,0 +1,190 @@
+{% extends 'depo/base.html' %}
+
+{% block title %}{{ sayfa_basligi }} - BZR Stok{% endblock %}
+{% block page_icon %}{% if islem == 'ekle' %}plus-circle-fill{% else %}pencil-square{% endif %}{% endblock %}
+{% block page_title %}{{ sayfa_basligi }}{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="bzr-card">
+
+            <!-- Form Başlığı -->
+            <div class="d-flex align-items-center gap-2 mb-4">
+                <div style="background: linear-gradient(135deg, var(--bzr-primary), #818cf8);
+                            width: 40px; height: 40px; border-radius: 10px;
+                            display: flex; align-items: center; justify-content: center;">
+                    <i class="bi bi-{% if islem == 'ekle' %}plus-lg{% else %}pencil{% endif %} text-white fs-5"></i>
+                </div>
+                <div>
+                    <h5 style="margin: 0; font-weight: 700;">{{ sayfa_basligi }}</h5>
+                    <small style="color: var(--bzr-muted);">
+                        {% if islem == 'ekle' %}
+                            BZR Market'e yeni ürün kaydı oluşturuyorsunuz.
+                        {% else %}
+                            "{{ urun.name }}" ürününü düzenliyorsunuz.
+                        {% endif %}
+                    </small>
+                </div>
+            </div>
+
+            <!-- Hata Özeti (varsa) -->
+            {% if form.errors %}
+                <div class="alert alert-danger bzr-alert mb-3" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    Lütfen aşağıdaki hataları düzeltin:
+                    <ul class="mb-0 mt-1">
+                        {% for field in form %}
+                            {% for error in field.errors %}
+                                <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                        {% for error in form.non_field_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <!-- ── FORM ────────────────────────────────────────────── -->
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <!--
+                    csrf_token: Django'nun Cross-Site Request Forgery koruması.
+                    POST formlarında MUTLAKA bulunmalıdır!
+                    Bu gizli token olmadan Django formu reddeder.
+                -->
+
+                <!-- Ürün Adı -->
+                <div class="mb-3">
+                    <label for="{{ form.name.id_for_label }}" class="form-label">
+                        <i class="bi bi-tag me-1"></i>{{ form.name.label }}
+                    </label>
+                    {{ form.name }}
+                    {% if form.name.help_text %}
+                        <div class="form-text">{{ form.name.help_text }}</div>
+                    {% endif %}
+                    {% if form.name.errors %}
+                        <div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Stok Bilgileri - 2 Kolon -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.stock_quantity.id_for_label }}" class="form-label">
+                            <i class="bi bi-boxes me-1"></i>{{ form.stock_quantity.label }}
+                        </label>
+                        {{ form.stock_quantity }}
+                        {% if form.stock_quantity.errors %}
+                            <div class="text-danger small mt-1">{{ form.stock_quantity.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.critical_threshold.id_for_label }}" class="form-label">
+                            <i class="bi bi-exclamation-triangle me-1"></i>{{ form.critical_threshold.label }}
+                        </label>
+                        {{ form.critical_threshold }}
+                        {% if form.critical_threshold.help_text %}
+                            <div class="form-text">{{ form.critical_threshold.help_text }}</div>
+                        {% endif %}
+                        {% if form.critical_threshold.errors %}
+                            <div class="text-danger small mt-1">{{ form.critical_threshold.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Fiyat Bilgileri - 2 Kolon -->
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label for="{{ form.purchase_price.id_for_label }}" class="form-label">
+                            <i class="bi bi-arrow-down-circle me-1" style="color: var(--bzr-danger)"></i>
+                            {{ form.purchase_price.label }}
+                        </label>
+                        {{ form.purchase_price }}
+                        {% if form.purchase_price.errors %}
+                            <div class="text-danger small mt-1">{{ form.purchase_price.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label for="{{ form.sale_price.id_for_label }}" class="form-label">
+                            <i class="bi bi-arrow-up-circle me-1" style="color: var(--bzr-success)"></i>
+                            {{ form.sale_price.label }}
+                        </label>
+                        {{ form.sale_price }}
+                        {% if form.sale_price.errors %}
+                            <div class="text-danger small mt-1">{{ form.sale_price.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Anlık Kâr Hesaplama (JavaScript ile) -->
+                <div class="p-3 rounded mb-4"
+                     style="background: rgba(99,102,241,0.08); border: 1px dashed var(--bzr-border);">
+                    <small style="color: var(--bzr-muted);">
+                        <i class="bi bi-calculator me-1"></i>
+                        Anlık Kâr Hesabı:
+                        <strong id="kar-hesap" style="color: var(--bzr-primary);">
+                            Fiyatları girin...
+                        </strong>
+                    </small>
+                </div>
+
+                <!-- Butonlar -->
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-bzr-primary px-4">
+                        <i class="bi bi-{% if islem == 'ekle' %}plus-lg{% else %}check-lg{% endif %} me-1"></i>
+                        {{ buton_metni }}
+                    </button>
+                    <a href="{% url 'depo:dashboard' %}"
+                       class="btn btn-sm px-4"
+                       style="background: rgba(255,255,255,0.05);
+                              color: var(--bzr-muted);
+                              border: 1px solid var(--bzr-border);
+                              border-radius: 8px;">
+                        <i class="bi bi-x-lg me-1"></i>İptal
+                    </a>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+/**
+ * Anlık Kâr Hesaplama
+ * ====================
+ * Kullanıcı fiyat girerken gerçek zamanlı kâr gösterir.
+ * views.py veya models.py'ye gerek yok - saf JavaScript.
+ */
+const alisInput = document.getElementById('{{ form.purchase_price.id_for_label }}');
+const satisInput = document.getElementById('{{ form.sale_price.id_for_label }}');
+const karDiv = document.getElementById('kar-hesap');
+
+function karHesapla() {
+    const alis = parseFloat(alisInput.value) || 0;
+    const satis = parseFloat(satisInput.value) || 0;
+    const kar = satis - alis;
+
+    if (alis > 0 && satis > 0) {
+        const oran = alis > 0 ? ((kar / alis) * 100).toFixed(1) : 0;
+        if (kar >= 0) {
+            karDiv.innerHTML = `<span style="color: #10b981">+₺${kar.toFixed(2)} kâr (${oran}%)</span>`;
+        } else {
+            karDiv.innerHTML = `<span style="color: #ef4444">₺${kar.toFixed(2)} zarar!</span>`;
+        }
+    } else {
+        karDiv.textContent = 'Fiyatları girin...';
+    }
+}
+
+alisInput.addEventListener('input', karHesapla);
+satisInput.addEventListener('input', karHesapla);
+karHesapla();  // Sayfa açılınca çalıştır (düzenleme modunda)
+</script>
+{% endblock %}

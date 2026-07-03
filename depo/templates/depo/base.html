@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}BZR Stok Yönetimi{% endblock %}</title>
+
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Sayfa yüklenmeden önce tema tercihini al (Flicker engellemek için) -->
+    <script>
+        const savedTheme = localStorage.getItem('bzr_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+
+    <style>
+        /* ── Genel Sayfa Stili ───────────────────────────────────────── */
+        :root {
+            --bzr-primary: #6366f1;   /* İndigo - Ana renk */
+            --bzr-success: #10b981;   /* Emerald - Başarı */
+            --bzr-danger:  #ef4444;   /* Kırmızı - Hata/Kritik */
+            --bzr-warning: #f59e0b;   /* Amber - Uyarı */
+            --bzr-dark:    #0f172a;   /* Slate 900 - Koyu arkaplan */
+            --bzr-card:    #1e293b;   /* Slate 800 - Kart arkaplanı */
+            --bzr-border:  #334155;   /* Slate 700 - Kenarlık */
+            --bzr-text:    #e2e8f0;   /* Slate 200 - Ana metin */
+            --bzr-muted:   #94a3b8;   /* Slate 400 - İkincil metin */
+        }
+
+        /* ── Açık Tema Değişkenleri ──────────────────────────────────── */
+        :root[data-theme="light"] {
+            --bzr-dark:    #f8fafc;   /* Slate 50 - Koyu arkaplan yerine açık */
+            --bzr-card:    #ffffff;   /* White - Kart arkaplanı */
+            --bzr-border:  #e2e8f0;   /* Slate 200 - Kenarlık */
+            --bzr-text:    #0f172a;   /* Slate 900 - Ana metin */
+            --bzr-muted:   #64748b;   /* Slate 500 - İkincil metin */
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bzr-dark);
+            color: var(--bzr-text);
+            min-height: 100vh;
+        }
+
+        /* ── Sidebar / Navbar ─────────────────────────────────────────── */
+        .bzr-sidebar {
+            width: 240px;
+            min-height: 100vh;
+            background: var(--bzr-card);
+            border-right: 1px solid var(--bzr-border);
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 100;
+            padding: 0;
+            transition: all 0.3s;
+        }
+
+        .bzr-logo {
+            padding: 1.5rem 1.25rem;
+            border-bottom: 1px solid var(--bzr-border);
+            background: linear-gradient(135deg, var(--bzr-primary), #818cf8);
+        }
+
+        .bzr-logo h4 {
+            color: #fff;
+            font-weight: 800;
+            font-size: 1.4rem;
+            margin: 0;
+            letter-spacing: 2px;
+        }
+
+        .bzr-logo small {
+            color: rgba(255,255,255,0.75);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Sidebar menü öğeleri */
+        .bzr-nav .nav-link {
+            color: var(--bzr-muted);
+            padding: 0.75rem 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            border-radius: 0;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .bzr-nav .nav-link:hover {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--bzr-primary);
+            border-left-color: var(--bzr-primary);
+        }
+
+        .bzr-nav .nav-link.active {
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--bzr-primary);
+            border-left-color: var(--bzr-primary);
+        }
+
+        .bzr-nav .nav-link i {
+            font-size: 1.1rem;
+            width: 1.25rem;
+        }
+
+        /* ── Ana İçerik Alanı ──────────────────────────────────────────── */
+        .bzr-main {
+            margin-left: 240px;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        /* ── Üst Bar ─────────────────────────────────────────────────── */
+        .bzr-topbar {
+            background: var(--bzr-card);
+            border: 1px solid var(--bzr-border);
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .bzr-topbar h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin: 0;
+            color: var(--bzr-text);
+        }
+
+        /* ── Kartlar ─────────────────────────────────────────────────── */
+        .bzr-card {
+            background: var(--bzr-card);
+            border: 1px solid var(--bzr-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: var(--bzr-card);
+            border: 1px solid var(--bzr-border);
+            border-radius: 12px;
+            padding: 1.25rem;
+            text-align: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .stat-card .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card .stat-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--bzr-text);
+        }
+
+        .stat-card .stat-label {
+            font-size: 0.8rem;
+            color: var(--bzr-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ── Tablo ──────────────────────────────────────────────────── */
+        .bzr-table {
+            color: var(--bzr-text);
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        .bzr-table thead th {
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--bzr-primary);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 0.875rem 1rem;
+            border: none;
+            border-bottom: 1px solid var(--bzr-border);
+        }
+
+        .bzr-table tbody tr {
+            border-bottom: 1px solid var(--bzr-border);
+            transition: background 0.15s;
+        }
+
+        .bzr-table tbody tr:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .bzr-table tbody td {
+            padding: 0.875rem 1rem;
+            vertical-align: middle;
+            border: none;
+            border-bottom: 1px solid var(--bzr-border);
+        }
+
+        /* ── Stok Güncelleme Butonları ───────────────────────────────── */
+        .stok-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            border: none;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .stok-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .stok-artir { background: rgba(16,185,129,0.2); color: #10b981; }
+        .stok-artir:hover { background: #10b981; color: #fff; }
+
+        .stok-azalt { background: rgba(239,68,68,0.2); color: #ef4444; }
+        .stok-azalt:hover { background: #ef4444; color: #fff; }
+
+        .stok-miktar {
+            font-weight: 700;
+            font-size: 1rem;
+            min-width: 40px;
+            display: inline-block;
+            text-align: center;
+        }
+
+        /* ── Badge'ler ────────────────────────────────────────────────── */
+        .badge-kritik {
+            background: rgba(239,68,68,0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239,68,68,0.3);
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .badge-kar {
+            background: rgba(16,185,129,0.15);
+            color: #10b981;
+            border-radius: 6px;
+            padding: 2px 8px;
+            font-weight: 600;
+        }
+
+        /* ── Butonlar ─────────────────────────────────────────────────── */
+        .btn-bzr-primary {
+            background: linear-gradient(135deg, var(--bzr-primary), #818cf8);
+            border: none;
+            color: #fff;
+            font-weight: 600;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-bzr-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+            color: #fff;
+        }
+
+        /* ── Form Stili ───────────────────────────────────────────────── */
+        .form-control, .form-select {
+            background: var(--bzr-card) !important;
+            border: 1px solid var(--bzr-border) !important;
+            color: var(--bzr-text) !important;
+            border-radius: 8px;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--bzr-primary) !important;
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.2) !important;
+            background: var(--bzr-card) !important;
+        }
+
+        .form-label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--bzr-muted);
+            margin-bottom: 0.4rem;
+        }
+
+        .form-text {
+            color: var(--bzr-muted) !important;
+            font-size: 0.78rem;
+        }
+
+        /* ── Bildirim Mesajları ───────────────────────────────────────── */
+        .bzr-alert {
+            border-radius: 10px;
+            border: none;
+            font-weight: 500;
+            padding: 0.75rem 1rem;
+        }
+
+        /* ── Arama Kutusu ─────────────────────────────────────────────── */
+        .bzr-search {
+            position: relative;
+        }
+
+        .bzr-search input {
+            padding-left: 2.5rem;
+        }
+
+        .bzr-search i {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--bzr-muted);
+        }
+
+        /* ── Responsive ────────────────────────────────────────────────── */
+        @media (max-width: 768px) {
+            .bzr-sidebar { transform: translateX(-100%); }
+            .bzr-main { margin-left: 0; padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ── Sidebar ────────────────────────────────────────────────────── -->
+<nav class="bzr-sidebar">
+    <!-- Logo -->
+    <div class="bzr-logo">
+        <h4>🏪 BZR</h4>
+        <small>Stok Yönetim Sistemi</small>
+    </div>
+
+    <!-- Menü Öğeleri -->
+    <ul class="bzr-nav nav flex-column mt-2">
+        <li class="nav-item">
+            <a href="{% url 'depo:dashboard' %}"
+               class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <i class="bi bi-grid-1x2-fill"></i>
+                Dashboard
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{% url 'depo:urun_ekle' %}"
+               class="nav-link {% if request.resolver_match.url_name == 'urun_ekle' %}active{% endif %}">
+                <i class="bi bi-plus-circle-fill"></i>
+                Yeni Ürün Ekle
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{% url 'depo:bulk_import' %}"
+               class="nav-link {% if request.resolver_match.url_name == 'bulk_import' %}active{% endif %}">
+                <i class="bi bi-upload"></i>
+                Toplu İçe Aktar
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="{% url 'depo:raporlar' %}"
+               class="nav-link {% if request.resolver_match.url_name == 'raporlar' %}active{% endif %}">
+                <i class="bi bi-bar-chart-fill"></i>
+                Raporlar & Uyarılar
+            </a>
+        </li>
+        <li class="nav-item">
+            <a href="/admin/" class="nav-link">
+                <i class="bi bi-shield-lock"></i>
+                Admin Paneli
+            </a>
+        </li>
+    </ul>
+
+    <!-- Tema Değiştirici -->
+    <div class="p-3 w-100 mt-auto" style="position: absolute; bottom: 0;">
+        <button id="theme-toggle" class="btn btn-sm w-100 d-flex align-items-center justify-content-center gap-2"
+                style="background: transparent; color: var(--bzr-text); border: 1px solid var(--bzr-border); border-radius: 8px;">
+            <i class="bi bi-brightness-high-fill" id="theme-icon"></i>
+            <span id="theme-text">Açık Tema</span>
+        </button>
+    </div>
+</nav>
+
+<!-- ── Ana İçerik ──────────────────────────────────────────────────── -->
+<main class="bzr-main">
+
+    <!-- Üst Bar -->
+    <div class="bzr-topbar">
+        <h1>
+            <i class="bi bi-{% block page_icon %}box{% endblock %} me-2"
+               style="color: var(--bzr-primary)"></i>
+            {% block page_title %}{{ sayfa_basligi }}{% endblock %}
+        </h1>
+        <div class="d-flex align-items-center gap-3">
+            <span style="color: var(--bzr-muted); font-size: 0.85rem;">
+                <i class="bi bi-clock me-1"></i>
+                BZR Market ERP
+            </span>
+        </div>
+    </div>
+
+    <!-- Django Messages (Bildirimler) -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert bzr-alert alert-{% if message.tags == 'error' %}danger{% elif message.tags == 'success' %}success{% elif message.tags == 'warning' %}warning{% else %}info{% endif %} alert-dismissible fade show d-flex align-items-center gap-2"
+                 role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Kapat"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Sayfa İçeriği -->
+    {% block content %}{% endblock %}
+
+</main>
+
+<!-- Bootstrap 5.3 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+{% block extra_js %}{% endblock %}
+
+<!-- Tema Değiştirme JS -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const themeText = document.getElementById('theme-text');
+
+        function updateThemeUI(theme) {
+            if (theme === 'light') {
+                themeIcon.className = 'bi bi-moon-stars-fill';
+                themeText.textContent = 'Koyu Tema';
+            } else {
+                themeIcon.className = 'bi bi-brightness-high-fill';
+                themeText.textContent = 'Açık Tema';
+            }
+        }
+
+        if(themeToggleBtn) {
+            updateThemeUI(document.documentElement.getAttribute('data-theme'));
+            themeToggleBtn.addEventListener('click', () => {
+                const currentTheme = document.documentElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                document.documentElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('bzr_theme', newTheme);
+                updateThemeUI(newTheme);
+            });
+        }
+    });
+</script>
+
+</body>
+</html>

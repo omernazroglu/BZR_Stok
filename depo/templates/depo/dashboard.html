@@ -1,0 +1,582 @@
+{% extends 'depo/base.html' %}
+
+{% block title %}Dashboard - BZR Stok{% endblock %}
+{% block page_icon %}grid-1x2-fill{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- ── İstatistik Kartları ─────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+    <!-- Toplam Ürün Sayısı -->
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--bzr-primary)">
+                <i class="bi bi-boxes"></i>
+            </div>
+            <div class="stat-value">{{ toplam_urun }}</div>
+            <div class="stat-label">Toplam Ürün Çeşidi</div>
+        </div>
+    </div>
+
+    <!-- Kritik Stok Uyarıları -->
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--bzr-danger)">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+            <div class="stat-value" style="color: {% if kritik_sayisi > 0 %}var(--bzr-danger){% else %}var(--bzr-success){% endif %}">
+                {{ kritik_sayisi }}
+            </div>
+            <div class="stat-label">Kritik Stok Uyarısı</div>
+        </div>
+    </div>
+
+    <!-- Toplam Stok Değeri -->
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-icon" style="color: var(--bzr-success)">
+                <i class="bi bi-currency-dollar"></i>
+            </div>
+            <div class="stat-value" style="color: var(--bzr-success); font-size: 1.4rem;">
+                ₺<span id="toplam-deger-span">{{ toplam_deger }}</span>
+            </div>
+            <div class="stat-label">Toplam Stok Değeri (Alış)</div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ── Ürün Listesi Kartı ──────────────────────────────────────────── -->
+<div class="bzr-card">
+
+    <!-- Kart Başlık -->
+    <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+        <h5 style="font-weight: 700; margin: 0;">
+            <i class="bi bi-list-ul me-2" style="color: var(--bzr-primary)"></i>
+            Ürün Listesi
+        </h5>
+
+        <!-- Sağ taraf: Arama + Ekle butonu -->
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            <!-- Arama Kutusu -->
+            <form method="get" class="bzr-search d-flex align-items-center">
+                <i class="bi bi-search"></i>
+                <input type="text" name="q" value="{{ arama }}"
+                       class="form-control form-control-sm"
+                       placeholder="Ürün ara..."
+                       style="width: 200px;">
+                {% if arama %}
+                    <a href="{% url 'depo:dashboard' %}"
+                       class="btn btn-sm ms-1"
+                       style="color: var(--bzr-muted); border: 1px solid var(--bzr-border); border-radius: 8px;">
+                        <i class="bi bi-x"></i>
+                    </a>
+                {% endif %}
+            </form>
+
+            <!-- Seçilenleri Sil Butonu (Başlangıçta gizli) -->
+            <button class="btn btn-sm d-none" id="btnTopluSil" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 8px;">
+                <i class="bi bi-trash3 me-1"></i>Seçilenleri Sil (<span id="seciliSayi">0</span>)
+            </button>
+
+            <!-- Hızlı Fiyat Güncelleme -->
+            <button class="btn btn-sm" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px;" data-bs-toggle="modal" data-bs-target="#fiyatGuncelleModal">
+                <i class="bi bi-currency-exchange me-1"></i>Fiyat Güncelle
+            </button>
+
+            <!-- Yeni Ürün Ekle -->
+            <a href="{% url 'depo:urun_ekle' %}" class="btn btn-bzr-primary btn-sm">
+                <i class="bi bi-plus-lg me-1"></i>Yeni Ürün
+            </a>
+
+            <!-- Excel/CSV İçe Aktar -->
+            <a href="{% url 'depo:bulk_import' %}"
+               class="btn btn-sm"
+               style="background: rgba(16,185,129,0.15); color: #10b981;
+                      border: 1px solid rgba(16,185,129,0.3); border-radius: 8px;">
+                <i class="bi bi-upload me-1"></i>İçe Aktar
+            </a>
+        </div>
+    </div>
+
+    <!-- Arama sonuç bilgisi -->
+    {% if arama %}
+        <p style="color: var(--bzr-muted); font-size: 0.85rem; margin-bottom: 0.75rem;">
+            "<strong>{{ arama }}</strong>" için {{ urunler.count }} sonuç bulundu.
+        </p>
+    {% endif %}
+
+    <!-- ── Tablo ─────────────────────────────────────────────────── -->
+    {% if urunler %}
+    <div class="table-responsive">
+        <table class="table bzr-table mb-0" id="urun-tablosu">
+            <thead>
+                <tr>
+                    <th style="width: 40px;">
+                        <input class="form-check-input" type="checkbox" id="selectAll">
+                    </th>
+                    <th>#</th>
+                    <th>Ürün Adı</th>
+                    <th>Grubu</th>
+                    <th>Birim</th>
+                    <th class="text-center">Stok</th>
+                    <th class="text-center">Kritik Eşik</th>
+                    <th class="text-end">Alış Fiyatı</th>
+                    <th class="text-end">Satış Fiyatı</th>
+                    <th class="text-end">Kâr / Birim</th>
+                    <th class="text-center">Son Güncelleme</th>
+                    <th class="text-center">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for urun in urunler %}
+                <tr id="satir-{{ urun.pk }}"
+                    class="{% if urun.kritik_mi %}table-danger-soft{% endif %}">
+
+                    <!-- Checkbox -->
+                    <td>
+                        <input class="form-check-input row-checkbox" type="checkbox" value="{{ urun.pk }}">
+                    </td>
+
+                    <!-- Sıra No -->
+                    <td style="color: var(--bzr-muted); font-size: 0.8rem;">
+                        {{ forloop.counter }}
+                    </td>
+
+                    <!-- Ürün Adı + Kritik Badge -->
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="bi bi-box-seam" style="color: var(--bzr-primary)"></i>
+                            <span style="font-weight: 500;">{{ urun.name }}</span>
+                            {% if urun.kritik_mi %}
+                                <span class="badge-kritik">⚠ Kritik</span>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <!-- Grubu -->
+                    <td style="color: var(--bzr-muted); font-size: 0.85rem;">
+                        {{ urun.group|default:"-" }}
+                    </td>
+
+                    <!-- Birim -->
+                    <td style="color: var(--bzr-muted); font-size: 0.85rem;">
+                        {{ urun.unit|default:"-" }}
+                    </td>
+
+                    <!-- Stok Miktarı + +1/-1 Butonları -->
+                    <td class="text-center">
+                        <div class="d-flex align-items-center justify-content-center gap-1">
+                            <!-- -1 Butonu -->
+                            <button
+                                class="stok-btn stok-azalt"
+                                onclick="stokGuncelle({{ urun.pk }}, 'azalt')"
+                                title="Stoku 1 azalt">
+                                −
+                            </button>
+
+                            <!-- Stok Miktarı (AJAX ile güncellenir) -->
+                            <span class="stok-miktar {% if urun.kritik_mi %}text-danger{% else %}text-success{% endif %}"
+                                  id="stok-{{ urun.pk }}">
+                                {{ urun.stock_quantity }}
+                            </span>
+
+                            <!-- +1 Butonu -->
+                            <button
+                                class="stok-btn stok-artir"
+                                onclick="stokGuncelle({{ urun.pk }}, 'artir')"
+                                title="Stoku 1 artır">
+                                +
+                            </button>
+                        </div>
+                    </td>
+
+                    <!-- Kritik Eşik -->
+                    <td class="text-center">
+                        <span style="color: var(--bzr-muted)">{{ urun.critical_threshold }}</span>
+                    </td>
+
+                    <!-- Alış Fiyatı -->
+                    <td class="text-end">
+                        <span style="color: var(--bzr-muted)">₺{{ urun.purchase_price }}</span>
+                    </td>
+
+                    <!-- Satış Fiyatı -->
+                    <td class="text-end">
+                        <strong>₺{{ urun.sale_price }}</strong>
+                    </td>
+
+                    <!-- Kâr/Birim -->
+                    <td class="text-end">
+                        {% if urun.kar >= 0 %}
+                            <span class="badge-kar">+₺{{ urun.kar }}</span>
+                        {% else %}
+                            <span style="color: var(--bzr-danger); font-weight: 600;">
+                                −₺{{ urun.kar|floatformat:2 }}
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Son Güncelleme -->
+                    <td class="text-center" style="font-size: 0.8rem; color: var(--bzr-muted);">
+                        {{ urun.updated_at|date:"d.m.Y H:i" }}
+                    </td>
+
+                    <!-- İşlem Butonları -->
+                    <td class="text-center">
+                        <div class="d-flex gap-1 justify-content-center">
+                            <!-- Düzenle -->
+                            <a href="{% url 'depo:urun_duzenle' urun.pk %}"
+                               class="btn btn-sm"
+                               style="background: rgba(99,102,241,0.15); color: var(--bzr-primary);
+                                      border: 1px solid rgba(99,102,241,0.3); border-radius: 6px;"
+                               title="Düzenle">
+                                <i class="bi bi-pencil-square"></i>
+                            </a>
+
+                            <!-- Sil -->
+                            <a href="{% url 'depo:urun_sil' urun.pk %}"
+                               class="btn btn-sm"
+                               style="background: rgba(239,68,68,0.15); color: #ef4444;
+                                      border: 1px solid rgba(239,68,68,0.3); border-radius: 6px;"
+                               title="Sil">
+                                <i class="bi bi-trash3"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+    <!-- Boş Durum -->
+    <div class="text-center py-5" style="color: var(--bzr-muted);">
+        <i class="bi bi-inbox" style="font-size: 4rem; opacity: 0.3;"></i>
+        <p class="mt-3 fs-5">
+            {% if arama %}
+                "<strong>{{ arama }}</strong>" ile eşleşen ürün bulunamadı.
+            {% else %}
+                Henüz ürün eklenmemiş.
+            {% endif %}
+        </p>
+        {% if not arama %}
+            <a href="{% url 'depo:urun_ekle' %}" class="btn btn-bzr-primary mt-2">
+                <i class="bi bi-plus-lg me-1"></i>İlk ürünü ekle
+            </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- Hızlı Fiyat Güncelleme Modalı -->
+<div class="modal fade" id="fiyatGuncelleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: var(--bzr-card); border: 1px solid var(--bzr-border);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--bzr-border);">
+                <h5 class="modal-title"><i class="bi bi-currency-exchange me-2 text-warning"></i>Hızlı Fiyat Güncelle</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Kapat"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3 position-relative">
+                    <label class="form-label">Ürün Ara</label>
+                    <input type="text" id="modalUrunAra" class="form-control" placeholder="Ürün adı yazın...">
+                    <!-- Arama Sonuçları Dropdown -->
+                    <ul id="modalAramaSonuclari" class="list-group position-absolute w-100" style="z-index: 1000; display: none; max-height: 200px; overflow-y: auto; background: var(--bzr-dark);">
+                    </ul>
+                </div>
+                
+                <div id="modalFiyatAlanlari" style="display: none;">
+                    <input type="hidden" id="modalUrunId">
+                    <div class="mb-3">
+                        <label class="form-label">Seçilen Ürün</label>
+                        <input type="text" id="modalSecilenUrun" class="form-control" disabled style="background: rgba(255,255,255,0.05); color: var(--bzr-primary); font-weight: 600;">
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Alış Fiyatı (₺)</label>
+                            <input type="number" id="modalAlisFiyat" class="form-control" step="0.01" min="0">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label">Satış Fiyatı (₺)</label>
+                            <input type="number" id="modalSatisFiyat" class="form-control" step="0.01" min="0">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--bzr-border);">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-bzr-primary" id="btnFiyatKaydet" style="display: none;">Fiyatları Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+
+{% block extra_js %}
+<script>
+/**
+ * stokGuncelle(pk, islem)
+ * ========================
+ * Dashboard'daki +1 / -1 butonlarına basılınca çalışır.
+ * Sayfayı yenilemeden (AJAX) stok miktarını günceller.
+ *
+ * @param {number} pk     - Ürün ID'si
+ * @param {string} islem  - 'artir' veya 'azalt'
+ */
+function stokGuncelle(pk, islem) {
+    // CSRF token: Django POST isteği için zorunlu güvenlik tokenı
+    // base.html'deki her formda {% csrf_token %} ile oluşturulur
+    // Cookie'den okunur
+    const csrfToken = getCookie('csrftoken');
+
+    // URL: /depo/stok/5/artir/ şeklinde oluşturulur
+    const url = `/depo/stok/${pk}/${islem}/`;
+
+    // fetch() → Modern JavaScript HTTP istek aracı (jQuery olmadan)
+    fetch(url, {
+        method: 'POST',              // Django @require_POST gerektirir
+        headers: {
+            'X-CSRFToken': csrfToken,  // Django CSRF koruması
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => {
+        if (!response.ok) {
+            // HTTP hata durumu (4xx, 5xx)
+            return response.json().then(data => {
+                alert(data.hata || 'Bir hata oluştu!');
+                throw new Error(data.hata);
+            });
+        }
+        return response.json();  // JSON yanıtı parse et
+    })
+    .then(data => {
+        // ── Başarılı yanıt işlemi ────────────────────────────────
+        // data.yeni_stok ve data.kritik_mi değerleri views.py'den gelir
+
+        const stokSpan = document.getElementById(`stok-${pk}`);
+        const satir = document.getElementById(`satir-${pk}`);
+
+        if (stokSpan) {
+            // Stok miktarını güncelle
+            stokSpan.textContent = data.yeni_stok;
+
+            // Rengi güncelle: kritik → kırmızı, normal → yeşil
+            stokSpan.className = `stok-miktar ${data.kritik_mi ? 'text-danger' : 'text-success'}`;
+
+            // Satır arkaplanını güncelle
+            if (data.kritik_mi) {
+                satir.style.background = 'rgba(239,68,68,0.05)';
+            } else {
+                satir.style.background = '';
+            }
+
+            // Toplam Değeri Güncelle (varsa)
+            if (data.toplam_deger) {
+                const toplamSpan = document.getElementById('toplam-deger-span');
+                if (toplamSpan) {
+                    toplamSpan.textContent = data.toplam_deger;
+                }
+            }
+
+            // Kısa animasyon - güncelleme geri bildirimi
+            stokSpan.style.transform = 'scale(1.4)';
+            stokSpan.style.transition = 'transform 0.2s';
+            setTimeout(() => {
+                stokSpan.style.transform = 'scale(1)';
+            }, 200);
+        }
+    })
+    .catch(err => {
+        console.error('Stok güncelleme hatası:', err);
+    });
+}
+
+/**
+ * getCookie(name)
+ * ===============
+ * Tarayıcı cookie'sinden değer okur.
+ * Django CSRF token'ını almak için kullanılır.
+ */
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.startsWith(name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// ── HIZLI FİYAT GÜNCELLEME MODALI JS ────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const aramaInput = document.getElementById('modalUrunAra');
+    const sonuclarListesi = document.getElementById('modalAramaSonuclari');
+    const fiyatAlanlari = document.getElementById('modalFiyatAlanlari');
+    const secilenUrunGosterim = document.getElementById('modalSecilenUrun');
+    const urunIdInput = document.getElementById('modalUrunId');
+    const alisInput = document.getElementById('modalAlisFiyat');
+    const satisInput = document.getElementById('modalSatisFiyat');
+    const btnKaydet = document.getElementById('btnFiyatKaydet');
+    let aramaTimeout = null;
+
+    if(!aramaInput) return;
+
+    aramaInput.addEventListener('input', (e) => {
+        clearTimeout(aramaTimeout);
+        const q = e.target.value.trim();
+        
+        if (q.length < 2) {
+            sonuclarListesi.style.display = 'none';
+            return;
+        }
+
+        aramaTimeout = setTimeout(() => {
+            fetch(`/depo/api/ara/?q=${encodeURIComponent(q)}`)
+                .then(r => r.json())
+                .then(data => {
+                    sonuclarListesi.innerHTML = '';
+                    if (data.sonuclar && data.sonuclar.length > 0) {
+                        data.sonuclar.forEach(urun => {
+                            const li = document.createElement('li');
+                            li.className = 'list-group-item list-group-item-action border-secondary';
+                            li.style.cursor = 'pointer';
+                            li.style.background = 'var(--bzr-card)';
+                            li.style.color = 'var(--bzr-text)';
+                            li.textContent = urun.text;
+                            li.onclick = () => urunSec(urun);
+                            sonuclarListesi.appendChild(li);
+                        });
+                        sonuclarListesi.style.display = 'block';
+                    } else {
+                        sonuclarListesi.style.display = 'none';
+                    }
+                });
+        }, 300); // 300ms debounce
+    });
+
+    function urunSec(urun) {
+        aramaInput.value = '';
+        sonuclarListesi.style.display = 'none';
+        
+        urunIdInput.value = urun.id;
+        secilenUrunGosterim.value = urun.text.split(' (')[0]; // Sadece ismi al
+        alisInput.value = urun.purchase_price;
+        satisInput.value = urun.sale_price;
+        
+        fiyatAlanlari.style.display = 'block';
+        btnKaydet.style.display = 'inline-block';
+    }
+
+    btnKaydet.addEventListener('click', () => {
+        const id = urunIdInput.value;
+        const alis = alisInput.value;
+        const satis = satisInput.value;
+
+        fetch('/depo/api/fiyat-guncelle/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                urun_id: id,
+                purchase_price: alis,
+                sale_price: satis
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                // Başarılı ise sayfayı yenile
+                location.reload(); 
+            } else {
+                alert('Hata: ' + data.hata);
+            }
+        });
+    });
+});
+
+// ── TOPLU SİLME İŞLEMLERİ ───────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const selectAllBtn = document.getElementById('selectAll');
+    const rowCheckboxes = document.querySelectorAll('.row-checkbox');
+    const btnTopluSil = document.getElementById('btnTopluSil');
+    const seciliSayiSpan = document.getElementById('seciliSayi');
+
+    if (!selectAllBtn) return;
+
+    // Checkbox durumuna göre butonu göster/gizle
+    function checkSelections() {
+        const checkedCount = document.querySelectorAll('.row-checkbox:checked').length;
+        if (checkedCount > 0) {
+            seciliSayiSpan.textContent = checkedCount;
+            btnTopluSil.classList.remove('d-none');
+        } else {
+            btnTopluSil.classList.add('d-none');
+        }
+        
+        // "Tümünü seç" butonunun durumu
+        selectAllBtn.checked = checkedCount === rowCheckboxes.length && rowCheckboxes.length > 0;
+    }
+
+    selectAllBtn.addEventListener('change', (e) => {
+        rowCheckboxes.forEach(cb => {
+            cb.checked = e.target.checked;
+        });
+        checkSelections();
+    });
+
+    rowCheckboxes.forEach(cb => {
+        cb.addEventListener('change', checkSelections);
+    });
+
+    btnTopluSil.addEventListener('click', () => {
+        const checkedBoxes = document.querySelectorAll('.row-checkbox:checked');
+        if (checkedBoxes.length === 0) return;
+
+        if (!confirm(`${checkedBoxes.length} adet ürünü silmek istediğinize emin misiniz?`)) {
+            return;
+        }
+
+        const ids = Array.from(checkedBoxes).map(cb => parseInt(cb.value));
+
+        fetch('/depo/api/toplu-sil/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                urun_idleri: ids
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.mesaj);
+                location.reload();
+            } else {
+                alert('Hata: ' + data.hata);
+            }
+        })
+        .catch(err => {
+            console.error('Toplu silme hatası:', err);
+            alert('Bir hata oluştu!');
+        });
+    });
+});
+
+</script>
+{% endblock %}

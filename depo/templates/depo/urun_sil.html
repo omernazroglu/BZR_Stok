@@ -1,0 +1,58 @@
+{% extends 'depo/base.html' %}
+
+{% block title %}Ürün Sil - BZR Stok{% endblock %}
+{% block page_icon %}trash3{% endblock %}
+{% block page_title %}Ürün Sil{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-5">
+        <div class="bzr-card text-center">
+
+            <!-- Uyarı İkonu -->
+            <div style="font-size: 4rem; color: var(--bzr-danger); margin-bottom: 1rem;">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+
+            <h4 style="font-weight: 700; color: var(--bzr-text);">Bu ürünü silmek istiyor musunuz?</h4>
+
+            <!-- Ürün Bilgisi -->
+            <div class="p-3 rounded my-3"
+                 style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);">
+                <p class="mb-1" style="color: var(--bzr-muted); font-size: 0.85rem;">Silinecek Ürün:</p>
+                <strong style="font-size: 1.2rem; color: var(--bzr-text);">{{ urun.name }}</strong>
+                <br>
+                <small style="color: var(--bzr-muted);">
+                    Stok: {{ urun.stock_quantity }} adet |
+                    Alış: ₺{{ urun.purchase_price }} |
+                    Satış: ₺{{ urun.sale_price }}
+                </small>
+            </div>
+
+            <p style="color: var(--bzr-muted); font-size: 0.9rem;">
+                Bu işlem <strong>geri alınamaz</strong>. Ürün ve tüm stok bilgileri kalıcı olarak silinir.
+            </p>
+
+            <!-- Silme Formu -->
+            <form method="post" class="d-flex gap-2 justify-content-center mt-3">
+                {% csrf_token %}
+                <button type="submit"
+                        class="btn px-4"
+                        style="background: var(--bzr-danger); color: #fff;
+                               border: none; border-radius: 8px; font-weight: 600;">
+                    <i class="bi bi-trash3 me-1"></i>Evet, Sil
+                </button>
+                <a href="{% url 'depo:dashboard' %}"
+                   class="btn px-4"
+                   style="background: rgba(255,255,255,0.05);
+                          color: var(--bzr-muted);
+                          border: 1px solid var(--bzr-border);
+                          border-radius: 8px;">
+                    <i class="bi bi-arrow-left me-1"></i>İptal
+                </a>
+            </form>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

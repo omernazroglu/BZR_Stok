@@ -1,0 +1,151 @@
+{% extends 'depo/base.html' %}
+
+{% block title %}Toplu İçe Aktarma - BZR Stok{% endblock %}
+{% block page_icon %}upload{% endblock %}
+{% block page_title %}Toplu İçe Aktarma{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+    <!-- ── Sol: Yükleme Formu ──────────────────────────────────────── -->
+    <div class="col-lg-7">
+        <div class="bzr-card">
+            <div class="d-flex align-items-center gap-2 mb-4">
+                <div style="background: linear-gradient(135deg, #10b981, #059669);
+                            width: 40px; height: 40px; border-radius: 10px;
+                            display: flex; align-items: center; justify-content: center;">
+                    <i class="bi bi-upload text-white fs-5"></i>
+                </div>
+                <div>
+                    <h5 style="margin: 0; font-weight: 700;">Excel veya CSV Yükle</h5>
+                    <small style="color: var(--bzr-muted);">
+                        Ürünleri toplu ekle veya güncelle
+                    </small>
+                </div>
+            </div>
+
+            <!-- Yükleme Formu -->
+            <form method="post" enctype="multipart/form-data">
+                <!--
+                    enctype="multipart/form-data" ÇOK ÖNEMLİ!
+                    Dosya yükleme formlarında bu attribute ZORUNLUDUR.
+                    Olmadan Django dosyayı almaz.
+                -->
+                {% csrf_token %}
+
+                <div class="mb-4">
+                    {{ form.dosya.label_tag }}
+                    {{ form.dosya }}
+                    {% if form.dosya.help_text %}
+                        <div class="form-text mt-1">
+                            <i class="bi bi-info-circle me-1"></i>
+                            {{ form.dosya.help_text }}
+                        </div>
+                    {% endif %}
+                    {% if form.dosya.errors %}
+                        <div class="text-danger small mt-1">{{ form.dosya.errors.0 }}</div>
+                    {% endif %}
+                </div>
+
+                <button type="submit" class="btn btn-bzr-primary px-4">
+                    <i class="bi bi-cloud-upload me-1"></i>
+                    Dosyayı Yükle ve İşle
+                </button>
+                <a href="{% url 'depo:dashboard' %}" class="btn btn-sm ms-2"
+                   style="color: var(--bzr-muted); border: 1px solid var(--bzr-border); border-radius: 8px;">
+                    <i class="bi bi-x me-1"></i>İptal
+                </a>
+            </form>
+        </div>
+    </div>
+
+    <!-- ── Sağ: Talimatlar ─────────────────────────────────────────── -->
+    <div class="col-lg-5">
+        <div class="bzr-card h-100">
+            <h6 style="color: var(--bzr-primary); font-weight: 700; margin-bottom: 1rem;">
+                <i class="bi bi-book me-1"></i>
+                Nasıl Kullanılır?
+            </h6>
+
+            <!-- Adımlar -->
+            <div class="d-flex flex-column gap-3">
+                <div class="d-flex gap-3">
+                    <div style="background: rgba(99,102,241,0.2); color: var(--bzr-primary);
+                                width: 28px; height: 28px; border-radius: 50%;
+                                display: flex; align-items: center; justify-content: center;
+                                flex-shrink: 0; font-weight: 700; font-size: 0.85rem;">1</div>
+                    <div>
+                        <p class="mb-1" style="font-weight: 600; font-size: 0.9rem;">Dosyayı Hazırla</p>
+                        <small style="color: var(--bzr-muted);">
+                            Excel (.xlsx) veya CSV (.csv) dosyası oluştur.
+                        </small>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-3">
+                    <div style="background: rgba(99,102,241,0.2); color: var(--bzr-primary);
+                                width: 28px; height: 28px; border-radius: 50%;
+                                display: flex; align-items: center; justify-content: center;
+                                flex-shrink: 0; font-weight: 700; font-size: 0.85rem;">2</div>
+                    <div>
+                        <p class="mb-1" style="font-weight: 600; font-size: 0.9rem;">Sütun Adları</p>
+                        <small style="color: var(--bzr-muted);">
+                            İlk satır şu başlıkları içermelidir (Kritik eşik otomatik 2, stok mevcut kalır):
+                        </small>
+                        <div class="mt-1 p-2 rounded"
+                             style="background: rgba(0,0,0,0.3); font-family: monospace; font-size: 0.75rem; color: #10b981;">
+                            Stok Adı | Alış Fiyatı 1 | Satış Fiyatı 1
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-3">
+                    <div style="background: rgba(99,102,241,0.2); color: var(--bzr-primary);
+                                width: 28px; height: 28px; border-radius: 50%;
+                                display: flex; align-items: center; justify-content: center;
+                                flex-shrink: 0; font-weight: 700; font-size: 0.85rem;">3</div>
+                    <div>
+                        <p class="mb-1" style="font-weight: 600; font-size: 0.9rem;">Upsert Mantığı</p>
+                        <small style="color: var(--bzr-muted);">
+                            Aynı isimde ürün varsa → <strong style="color: #f59e0b;">Güncellenir</strong><br>
+                            Yoksa → <strong style="color: #10b981;">Yeni eklenir</strong>
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Örnek Tablo -->
+            <div class="mt-4">
+                <p style="font-size: 0.8rem; color: var(--bzr-muted); margin-bottom: 0.5rem;">
+                    📋 Örnek İçerik:
+                </p>
+                <div class="table-responsive">
+                    <table style="font-size: 0.7rem; width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: rgba(99,102,241,0.1);">
+                                <th style="padding: 4px 8px; color: var(--bzr-primary);">Stok Adı</th>
+                                <th style="padding: 4px 8px; color: var(--bzr-primary);">Alış Fiyatı 1</th>
+                                <th style="padding: 4px 8px; color: var(--bzr-primary);">Satış Fiyatı 1</th>
+                            </tr>
+                        </thead>
+                        <tbody style="color: var(--bzr-text);">
+                            <tr>
+                                <td style="padding: 4px 8px; border-bottom: 1px solid var(--bzr-border);">ZEKİ ZADE TUZSUZ FISTIK İÇİ</td>
+                                <td style="padding: 4px 8px; border-bottom: 1px solid var(--bzr-border);">113,64</td>
+                                <td style="padding: 4px 8px; border-bottom: 1px solid var(--bzr-border);">275,00</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 4px 8px; border-bottom: 1px solid var(--bzr-border);">PAŞABAHÇE SU BARDAĞI 6LI</td>
+                                <td style="padding: 4px 8px; border-bottom: 1px solid var(--bzr-border);">30,74</td>
+                                <td style="padding: 4px 8px; border-bottom: 1px solid var(--bzr-border);">65,00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+{% endblock %}

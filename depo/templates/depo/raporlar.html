@@ -1,0 +1,238 @@
+{% extends 'depo/base.html' %}
+
+{% block title %}Raporlar - BZR Stok{% endblock %}
+{% block page_icon %}bar-chart-fill{% endblock %}
+{% block page_title %}Raporlar & Uyarılar{% endblock %}
+
+{% block content %}
+
+<!-- ── Özet İstatistikler ──────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card" style="border-left: 3px solid var(--bzr-danger);">
+            <div class="stat-icon" style="color: var(--bzr-danger);">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+            </div>
+            <div class="stat-value" style="color: var(--bzr-danger);">
+                {{ kritik_sayisi }}
+            </div>
+            <div class="stat-label">Kritik Stok Ürün Sayısı</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card" style="border-left: 3px solid var(--bzr-success);">
+            <div class="stat-icon" style="color: var(--bzr-success);">
+                <i class="bi bi-currency-dollar"></i>
+            </div>
+            <div class="stat-value" style="color: var(--bzr-success); font-size: 1.4rem;">
+                ₺{{ ozet.ort_kar|floatformat:2|default:"0.00" }}
+            </div>
+            <div class="stat-label">Ortalama Birim Kâr</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card" style="border-left: 3px solid var(--bzr-primary);">
+            <div class="stat-icon" style="color: var(--bzr-primary);">
+                <i class="bi bi-archive-fill"></i>
+            </div>
+            <div class="stat-value" style="font-size: 1.4rem;">
+                ₺{{ ozet.toplam_stok_degeri|floatformat:2|default:"0.00" }}
+            </div>
+            <div class="stat-label">Toplam Stok Değeri (Alış)</div>
+        </div>
+    </div>
+</div>
+
+
+<!-- ── Kritik Stok Uyarıları ──────────────────────────────────────── -->
+<div class="bzr-card mb-4">
+    <h5 style="font-weight: 700; margin-bottom: 1.25rem; color: var(--bzr-danger);">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        Kritik Stok Uyarıları
+        <span class="ms-2 px-2 py-0 rounded"
+              style="background: rgba(239,68,68,0.15); color: var(--bzr-danger);
+                     font-size: 0.9rem; font-weight: 700;">
+            {{ kritik_sayisi }}
+        </span>
+    </h5>
+
+    {% if kritik_urunler %}
+        <div class="table-responsive">
+            <table class="table bzr-table mb-0">
+                <thead>
+                    <tr>
+                        <th>Ürün Adı</th>
+                        <th class="text-center">Mevcut Stok</th>
+                        <th class="text-center">Kritik Eşik</th>
+                        <th class="text-center">Açık</th>
+                        <th class="text-end">Alış Fiyatı</th>
+                        <th class="text-end">Satış Fiyatı</th>
+                        <th class="text-center">İşlem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for urun in kritik_urunler %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-box-seam" style="color: var(--bzr-danger)"></i>
+                                <span style="font-weight: 500;">{{ urun.name }}</span>
+                                {% if urun.stock_quantity == 0 %}
+                                    <span class="px-2 py-0 rounded"
+                                          style="background: rgba(239,68,68,0.3); color: #ef4444;
+                                                 font-size: 0.7rem; font-weight: 700;">
+                                        TÜKENDI
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <!-- Mevcut Stok (kırmızı) -->
+                        <td class="text-center">
+                            <strong style="color: var(--bzr-danger); font-size: 1.1rem;">
+                                {{ urun.stock_quantity }}
+                            </strong>
+                        </td>
+
+                        <!-- Kritik Eşik -->
+                        <td class="text-center" style="color: var(--bzr-muted);">
+                            {{ urun.critical_threshold }}
+                        </td>
+
+                        <!-- Açık (ne kadar eksik) -->
+                        <td class="text-center">
+                            <span style="color: #f59e0b; font-weight: 600;">
+                                {{ urun.critical_threshold|add:"-urun.stock_quantity" }}
+                                <!-- Django template'de çıkarma: filter yok, bunu JS'de yap -->
+                                {% widthratio urun.stock_quantity urun.critical_threshold 100 as oran %}
+                            </span>
+                            <!-- İlerleme çubuğu -->
+                            <div style="background: rgba(239,68,68,0.1); border-radius: 4px;
+                                        height: 6px; margin-top: 4px; overflow: hidden;">
+                                <div style="background: var(--bzr-danger);
+                                            width: {{ oran }}%;
+                                            height: 100%;
+                                            border-radius: 4px;
+                                            transition: width 0.5s;
+                                            max-width: 100%;">
+                                </div>
+                            </div>
+                            <small style="color: var(--bzr-muted); font-size: 0.7rem;">
+                                %{{ oran }} dolu
+                            </small>
+                        </td>
+
+                        <td class="text-end" style="color: var(--bzr-muted);">
+                            ₺{{ urun.purchase_price }}
+                        </td>
+                        <td class="text-end"><strong>₺{{ urun.sale_price }}</strong></td>
+
+                        <!-- Düzenle Butonu -->
+                        <td class="text-center">
+                            <a href="{% url 'depo:urun_duzenle' urun.pk %}"
+                               class="btn btn-sm"
+                               style="background: rgba(99,102,241,0.15); color: var(--bzr-primary);
+                                      border: 1px solid rgba(99,102,241,0.3); border-radius: 6px;">
+                                <i class="bi bi-pencil-square me-1"></i>Stok Güncelle
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="text-center py-4" style="color: var(--bzr-muted);">
+            <i class="bi bi-check-circle-fill" style="font-size: 3rem; color: var(--bzr-success);"></i>
+            <p class="mt-2 fs-5">🎉 Tüm ürünlerin stoğu yeterli! Kritik ürün yok.</p>
+        </div>
+    {% endif %}
+</div>
+
+
+<!-- ── Kâr Analizi Tablosu ─────────────────────────────────────────── -->
+<div class="bzr-card">
+    <h5 style="font-weight: 700; margin-bottom: 1.25rem; color: var(--bzr-success);">
+        <i class="bi bi-graph-up-arrow me-2"></i>
+        Kâr Analizi - Tüm Ürünler
+    </h5>
+
+    {% if kar_listesi %}
+        <div class="table-responsive">
+            <table class="table bzr-table mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Ürün Adı</th>
+                        <th class="text-end">Alış Fiyatı</th>
+                        <th class="text-end">Satış Fiyatı</th>
+                        <th class="text-end">Birim Kâr</th>
+                        <th class="text-end">Kâr Oranı</th>
+                        <th class="text-center">Stok</th>
+                        <th class="text-end">Potansiyel Kâr</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for urun in kar_listesi %}
+                    <tr>
+                        <td style="color: var(--bzr-muted); font-size: 0.8rem;">
+                            {{ forloop.counter }}
+                        </td>
+                        <td>
+                            <span style="font-weight: 500;">{{ urun.name }}</span>
+                        </td>
+                        <td class="text-end" style="color: var(--bzr-muted);">
+                            ₺{{ urun.purchase_price }}
+                        </td>
+                        <td class="text-end">
+                            <strong>₺{{ urun.sale_price }}</strong>
+                        </td>
+
+                        <!-- Birim Kâr -->
+                        <td class="text-end">
+                            {% if urun.kar >= 0 %}
+                                <span class="badge-kar">+₺{{ urun.kar }}</span>
+                            {% else %}
+                                <span style="color: var(--bzr-danger); font-weight: 600;">
+                                    -₺{{ urun.kar|floatformat:2 }}
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Kâr Oranı -->
+                        <td class="text-end">
+                            <span style="{% if urun.kar_orani >= 0 %}color: #10b981{% else %}color: #ef4444{% endif %}; font-weight: 600;">
+                                %{{ urun.kar_orani }}
+                            </span>
+                        </td>
+
+                        <!-- Stok -->
+                        <td class="text-center">
+                            <span class="{% if urun.kritik_mi %}text-danger{% else %}text-success{% endif %} fw-bold">
+                                {{ urun.stock_quantity }}
+                            </span>
+                        </td>
+
+                        <!-- Toplam Potansiyel Kâr (birim_kar × stok) -->
+                        <td class="text-end">
+                            {% if urun.kar >= 0 %}
+                                <strong style="color: #10b981;">
+                                    +₺{{ urun.kar|floatformat:2 }}×{{ urun.stock_quantity }}
+                                </strong>
+                            {% else %}
+                                <span style="color: var(--bzr-muted);">-</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p style="color: var(--bzr-muted); text-align: center; padding: 2rem;">
+            Henüz ürün bulunmuyor.
+        </p>
+    {% endif %}
+</div>
+
+{% endblock %}
