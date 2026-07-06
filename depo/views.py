@@ -488,4 +488,32 @@ def raporlar(request):
         'ozet': ozet,
         'sayfa_basligi': 'Raporlar & Uyarılar',
     }
-    return render(request, 'depo/raporlar.html', context)
+    return render(request, 'depo/raporlar.html', context)   
+
+from django.http import JsonResponse
+from .models import UrunStok
+
+def stok_urun_listesi_api(request):
+    """
+    E-ticaret sitesinin stoktaki ürünleri çekebilmesi için
+    verileri JSON formatında dışarı açan güvenli API kapısı.
+    """
+    urunler = UrunStok.objects.all()
+    urun_listesi = []
+    
+    for urun in urunler:
+        urun_listesi.append({
+            'id': urun.id,
+            'name': urun.name,
+            'group': urun.group or '',
+            'sale_price': float(urun.sale_price),
+            'stock': urun.stock_quantity
+        })
+        
+    # JSON verisi oluşturuyoruz ve Türkçe karakterlerin bozulmamasını sağlıyoruz
+    response = JsonResponse(urun_listesi, safe=False, json_dumps_params={'ensure_ascii': False})
+    
+    # ÇOK ÖNEMLİ: E-ticaret sitesi farklı bir alt alan adından (stok.'tan) veri isteyeceği için
+    # tarayıcının CORS (Güvenlik) engeline takılmaması için bu izni veriyoruz.
+    response["Access-Control-Allow-Origin"] = "*"
+    return response

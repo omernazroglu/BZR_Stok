@@ -46,4 +46,6 @@ urlpatterns = [
     path('api/ara/', views.api_urun_ara, name='api_urun_ara'),
     path('api/fiyat-guncelle/', views.api_fiyat_guncelle, name='api_fiyat_guncelle'),
     path('api/toplu-sil/', views.api_toplu_sil, name='api_toplu_sil'),
+    
+    path('api/urunler/', views.stok_urun_listesi_api, name='stok_urun_listesi_api'),
 ]
